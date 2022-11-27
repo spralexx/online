@@ -1112,9 +1112,7 @@ std::string DocumentBroker::handleRenameFileCommand(std::string sessionId,
 
     if (_docState.activity() == DocumentState::Activity::Rename)
     {
-        if (_renameFilename == newFilename)
-            return std::string(); // Nothing to do, it's a duplicate.
-        else
+        if (_renameFilename != newFilename)
             return "error: cmd=renamefile kind=conflict"; // Renaming in progress.
     }
 
@@ -1132,7 +1130,7 @@ std::string DocumentBroker::handleRenameFileCommand(std::string sessionId,
 
 void DocumentBroker::startRenameFileCommand()
 {
-    LOG_TRC("Starting renamefile command execution.");
+    LOG_DBG("Starting renamefile command execution");
 
     if (_renameSessionId.empty() || _renameFilename.empty())
     {
@@ -1169,7 +1167,7 @@ void DocumentBroker::startRenameFileCommand()
 
 void DocumentBroker::endRenameFileCommand()
 {
-    LOG_TRC("Ending renamefile command execution.");
+    LOG_DBG("Ending renamefile command execution");
 
     _renameSessionId.clear();
     _renameFilename.clear();
@@ -1364,20 +1362,21 @@ void DocumentBroker::checkAndUploadToStorage(const std::shared_ptr<ClientSession
                 const auto it = _sessions.find(_renameSessionId);
                 if (it == _sessions.end())
                 {
-                    LOG_ERR("Session with sessionId ["
-                            << _renameSessionId << "] not found to rename docKey [" << _docKey
-                            << "]. The document will not be renamed.");
+                    LOG_ERR("Session [" << _renameSessionId << "] not found to rename docKey ["
+                                        << _docKey << "]. The document will not be renamed.");
                     broadcastSaveResult(false, "Renaming session not found");
+                    endRenameFileCommand();
                 }
                 else
                 {
-                    LOG_DBG("Renaming in storage as there is no new version to upload first.");
+                    LOG_DBG("Renaming in storage as there is no new version to upload first");
                     std::string uploadAsPath;
                     constexpr bool isRename = true;
-                    uploadAsToStorage(it->second, uploadAsPath, _renameFilename, isRename);
+                    constexpr bool force = false;
+                    uploadToStorageInternal(it->second, uploadAsPath, _renameFilename, isRename,
+                                            force);
                 }
 
-                endRenameFileCommand();
                 return;
             }
         }
@@ -1581,9 +1580,9 @@ void DocumentBroker::uploadToStorageInternal(const std::shared_ptr<ClientSession
                 const std::string renameSessionId = _renameSessionId;
                 endRenameFileCommand();
 
-                auto pair = _sessions.find(renameSessionId);
-                if (pair != _sessions.end() && pair->second)
-                    pair->second->sendTextFrameAndLogError("error: cmd=renamefile kind=failed");
+                auto it = _sessions.find(renameSessionId);
+                if (it != _sessions.end() && it->second)
+                    it->second->sendTextFrameAndLogError("error: cmd=renamefile kind=failed");
             }
             break;
 
@@ -1662,20 +1661,20 @@ void DocumentBroker::handleUploadToStorageResponse(const StorageBase::UploadResu
                     const auto it = _sessions.find(_renameSessionId);
                     if (it == _sessions.end())
                     {
-                        LOG_ERR("Session with sessionId ["
-                                << _renameSessionId << "] not found to rename docKey [" << _docKey
-                                << "]. The document will not be renamed.");
+                        LOG_ERR("Session [" << _renameSessionId << "] not found to rename docKey ["
+                                            << _docKey << "]. The document will not be renamed.");
                         broadcastSaveResult(false, "Renaming session not found");
+                        endRenameFileCommand();
                     }
                     else
                     {
-                        LOG_DBG("Renaming in storage as there is no new version to upload first.");
+                        LOG_DBG("Renaming in storage as we just finished pending upload");
                         std::string uploadAsPath;
                         constexpr bool isRename = true;
-                        uploadAsToStorage(it->second, uploadAsPath, _renameFilename, isRename);
+                        constexpr bool force = false;
+                        uploadToStorageInternal(it->second, uploadAsPath, _renameFilename, isRename,
+                                                force);
                     }
-
-                    endRenameFileCommand();
                 }
                 break;
 
@@ -1691,6 +1690,8 @@ void DocumentBroker::handleUploadToStorageResponse(const StorageBase::UploadResu
         }
         else if (_uploadRequest->isRename())
         {
+            endRenameFileCommand();
+
             // encode the name
             const std::string& filename = uploadResult.getSaveAsName();
             auto uri = Poco::URI(uploadResult.getSaveAsUrl());
@@ -1704,8 +1705,7 @@ void DocumentBroker::handleUploadToStorageResponse(const StorageBase::UploadResu
             uri.setQueryParameters(queryParams);
 
             const std::string url = uri.toString();
-            std::string encodedName;
-            Poco::URI::encode(filename, "", encodedName);
+            std::string encodedName = Util::encodeURIComponent(filename);
             const std::string filenameAnonym = COOLWSD::anonymizeUrl(filename);
             std::ostringstream oss;
             oss << "renamefile: " << "filename=" << encodedName << " url=" << url;
