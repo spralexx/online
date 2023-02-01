@@ -721,6 +721,18 @@ L.Control.UIManager = L.Control.extend({
 		}
 	},
 
+	toggleAccessKeys: function() {
+		if ($('.ui-tab').hasClass('accesskey-tooltip')) {
+			$('.ui-tab').removeClass('accesskey-tooltip');
+		} else {
+			$('.ui-tab').addClass('accesskey-tooltip');
+		}
+	},
+
+	hasAccessKeysTooltip: function() {
+		return ($('.ui-tab').hasClass('accesskey-tooltip'));
+	},
+
 	// Blocking UI
 
 	isUIBlocked: function() {
