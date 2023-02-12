@@ -329,9 +329,9 @@ L.Control.NotebookbarImpress = L.Control.NotebookbarWriter.extend({
 	getViewTab: function() {
 		var content = [
 			{
-				'type': 'bigtoolitem',
+				'type': 'bigcustomtoolitem',
 				'text': _('Presentation'),
-				'command': '.uno:Presentation'
+				'command': 'presentation'
 			},
 			{
 				'id': 'fullscreen',
@@ -802,9 +802,9 @@ L.Control.NotebookbarImpress = L.Control.NotebookbarWriter.extend({
 				'vertical': 'true'
 			},
 			{
-				'type': 'bigtoolitem',
+				'type': 'bigcustomtoolitem',
 				'text': _('Presentation'),
-				'command': '.uno:Presentation'
+				'command': 'presentation'
 			},
 			{
 				'type': 'bigtoolitem',
