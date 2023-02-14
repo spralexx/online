@@ -2403,6 +2403,13 @@ L.CanvasTileLayer = L.Layer.extend({
 	_showURLPopUp: function(position, url) {
 		// # for internal links
 		if (!url.startsWith('#')) {
+			if (this._map['wopi'].EnableRemoteLinkPicker)
+				this._map.fire('postMessage', { msgId: 'Action_GetLinkPreview', args: { url: url } });
+
+			var preview = L.DomUtil.createWithId('div', 'hyperlink-pop-up-preview');
+			if (this._map['wopi'].EnableRemoteLinkPicker)
+				preview.innerText = 'Loading preview...';
+
 			var link = L.DomUtil.createWithId('a', 'hyperlink-pop-up');
 			link.innerText = url;
 			var copyBtn = L.DomUtil.createWithId('div', 'hyperlink-pop-up-copy');
@@ -2429,7 +2436,7 @@ L.CanvasTileLayer = L.Layer.extend({
 			imgRemoveBtn.setAttribute('width', 18);
 			imgRemoveBtn.setAttribute('height', 18);
 			imgRemoveBtn.setAttribute('style', 'padding: 4px');
-			var linkOuterHtml = link.outerHTML + copyBtn.outerHTML + editBtn.outerHTML + removeBtn.outerHTML;
+			var linkOuterHtml = preview.outerHTML + link.outerHTML + copyBtn.outerHTML + editBtn.outerHTML + removeBtn.outerHTML;
 			this._map.hyperlinkPopup = new L.Popup({className: 'hyperlink-popup', closeButton: false, closeOnClick: false, autoPan: false})
 				.setContent(linkOuterHtml)
 				.setLatLng(position)
