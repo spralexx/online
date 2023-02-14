@@ -883,6 +883,9 @@ L.Map.include({
 				}
 			}
 			break;
+		case 'remotelink':
+			this.fire('postMessage', { msgId: 'UI_PickLink' });
+			break;
 		case 'zoteroaddeditcitation':
 			{
 				this.zotero.handleItemList();
